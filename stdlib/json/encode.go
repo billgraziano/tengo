@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/d5/tengo/v2"
+	"github.com/billgraziano/tengo/v2"
 )
 
 // safeSet holds the value true if the ASCII character with the given array
@@ -240,7 +240,7 @@ func Encode(o tengo.Object) ([]byte, error) {
 		b = strconv.AppendInt(b, o.Value, 10)
 	case *tengo.String:
 		// string encoding bug is fixed with newly introduced function
-		// encodeString(). See: https://github.com/d5/tengo/issues/268
+		// encodeString(). See: https://github.com/billgraziano/tengo/issues/268
 		b = encodeString(b, o.Value)
 	case *tengo.Time:
 		y, err := o.Value.MarshalJSON()

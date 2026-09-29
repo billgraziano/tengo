@@ -4,9 +4,9 @@ import (
 	gojson "encoding/json"
 	"testing"
 
-	"github.com/d5/tengo/v2"
-	"github.com/d5/tengo/v2/require"
-	"github.com/d5/tengo/v2/stdlib/json"
+	"github.com/billgraziano/tengo/v2"
+	"github.com/billgraziano/tengo/v2/require"
+	"github.com/billgraziano/tengo/v2/stdlib/json"
 )
 
 type ARR = []interface{}
@@ -31,7 +31,7 @@ func TestJSON(t *testing.T) {
 	testJSONEncodeDecode(t, "foo")
 	testJSONEncodeDecode(t, "foo bar")
 	testJSONEncodeDecode(t, "foo \"bar\"")
-	// See: https://github.com/d5/tengo/issues/268
+	// See: https://github.com/billgraziano/tengo/issues/268
 	testJSONEncodeDecode(t, "1\u001C04")
 	testJSONEncodeDecode(t, "çığöşü")
 	testJSONEncodeDecode(t, "ç1\u001C04IĞÖŞÜ")

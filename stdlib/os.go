@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/d5/tengo/v2"
+	"github.com/billgraziano/tengo/v2"
 )
 
 var osModule = map[string]tengo.Object{
