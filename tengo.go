@@ -3,7 +3,9 @@ package tengo
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -305,5 +307,103 @@ func FromInterface(v interface{}) (Object, error) {
 	case CallableFunc:
 		return &UserFunction{Value: v}, nil
 	}
+	return fromReflectValue(v)
+}
+
+// fromReflectValue is FromInterface's fallback for Go values that
+// aren't one of the concrete types handled directly by its type switch:
+// named bool/int/float/string types, and arbitrary slices, arrays,
+// maps, structs, and pointers built from any of those (or from types
+// already handled above). It mirrors how encoding/json walks a value.
+//
+// Scalar kinds are normalized to the base Go type (string, int64,
+// float64, bool) and passed back through FromInterface, so they still
+// go through the same explicit cases (and limits like MaxStringLen) as
+// a direct call would; composite kinds recurse element-wise, also
+// through FromInterface, so nested custom types and tengo.Object values
+// are handled correctly at any depth.
+//
+// A cyclic Go value (a struct/slice/map that references itself) will
+// recurse indefinitely here, the same as encoding/json.Marshal would on
+// the same input; this intentionally matches that behavior rather than
+// paying for cycle detection on every call.
+func fromReflectValue(v interface{}) (Object, error) {
+	rv := reflect.ValueOf(v)
+
+	switch rv.Kind() {
+	case reflect.Invalid:
+		return UndefinedValue, nil
+	case reflect.Ptr, reflect.Interface:
+		if rv.IsNil() {
+			return UndefinedValue, nil
+		}
+		return FromInterface(rv.Elem().Interface())
+	case reflect.Bool:
+		return FromInterface(rv.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return FromInterface(rv.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64:
+		return FromInterface(int64(rv.Uint()))
+	case reflect.Float32, reflect.Float64:
+		return FromInterface(rv.Float())
+	case reflect.String:
+		return FromInterface(rv.String())
+	case reflect.Slice, reflect.Array:
+		n := rv.Len()
+		arr := make([]Object, n)
+		for i := 0; i < n; i++ {
+			elem, err := FromInterface(rv.Index(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+			arr[i] = elem
+		}
+		return &Array{Value: arr}, nil
+	case reflect.Map:
+		kv := make(map[string]Object, rv.Len())
+		iter := rv.MapRange()
+		for iter.Next() {
+			key := iter.Key()
+			keyStr := key.String()
+			if key.Kind() != reflect.String {
+				keyStr = fmt.Sprint(key.Interface())
+			}
+			val, err := FromInterface(iter.Value().Interface())
+			if err != nil {
+				return nil, err
+			}
+			kv[keyStr] = val
+		}
+		return &Map{Value: kv}, nil
+	case reflect.Struct:
+		t := rv.Type()
+		kv := make(map[string]Object, t.NumField())
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			if field.PkgPath != "" { // unexported field
+				continue
+			}
+
+			name := field.Name
+			if tag, ok := field.Tag.Lookup("json"); ok {
+				tagName, _, _ := strings.Cut(tag, ",")
+				if tagName == "-" {
+					continue
+				}
+				if tagName != "" {
+					name = tagName
+				}
+			}
+
+			val, err := FromInterface(rv.Field(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+			kv[name] = val
+		}
+		return &Map{Value: kv}, nil
+	}
+
 	return nil, fmt.Errorf("cannot convert to object: %T", v)
 }
