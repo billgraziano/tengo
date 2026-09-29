@@ -1033,7 +1033,7 @@ func TestCompilerErrorReport(t *testing.T) {
 		"Compile Error: 'a' redeclared in this block\n\tat test:1:7")
 
 	expectCompileError(t, `return 5`,
-		"Compile Error: return not allowed outside function\n\tat test:1:1")
+		"Compile Error: return with value not allowed outside function\n\tat test:1:1")
 	expectCompileError(t, `func() { break }`,
 		"Compile Error: break not allowed outside loop\n\tat test:1:10")
 	expectCompileError(t, `func() { continue }`,

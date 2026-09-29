@@ -1746,7 +1746,10 @@ out = func() {
 	return sum(5)
 }()`, nil, 15)
 
-	expectError(t, `return 5`, nil, "return not allowed outside function")
+	// A bare top-level return is now allowed (halts the script early,
+	// like OpSuspend); only a top-level return WITH a value is
+	// rejected, since it has no defined destination outside a function.
+	expectError(t, `return 5`, nil, "return with value not allowed outside function")
 
 	// closure and block scopes
 	expectRun(t, `
