@@ -238,10 +238,24 @@ func ToInterface(o Object) (res interface{}) {
 		res = errors.New(o.String())
 	case *Undefined:
 		res = nil
+	case ToGoValuer:
+		return o.ToGoValue()
 	case Object:
 		return o
 	}
 	return
+}
+
+// ToGoValuer lets a custom Object control its own representation when
+// converted back to a plain Go value via ToInterface. Without this, a
+// custom Object falls through to the generic "case Object: return o"
+// behavior below and comes back completely unconverted, which is often
+// not what's wanted for a type that started life as ordinary Go data.
+//
+// This is purely opt-in: a custom Object that doesn't implement
+// ToGoValuer is unaffected and keeps today's passthrough behavior.
+type ToGoValuer interface {
+	ToGoValue() interface{}
 }
 
 // FromInterface will attempt to convert an interface{} v to a Tengo Object
