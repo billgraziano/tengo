@@ -475,8 +475,18 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 	case *parser.ReturnStmt:
 		if c.symbolTable.Parent(true) == nil {
-			// outside the function
-			return c.errorf(node, "return not allowed outside function")
+			// outside any function: only a bare "return" (no value) is
+			// allowed, and it halts the whole script early rather than
+			// returning to a caller. A returned value has no defined
+			// destination at the top level (script results are read
+			// back via named globals, not a return value), so requiring
+			// a bare return avoids silently discarding one.
+			if node.Result != nil {
+				return c.errorf(node,
+					"return with value not allowed outside function")
+			}
+			c.emit(node, parser.OpReturn, 0)
+			return nil
 		}
 
 		if node.Result == nil {

@@ -675,6 +675,14 @@ func (v *VM) run() {
 			} else {
 				retVal = UndefinedValue
 			}
+			if v.framesIndex == 1 {
+				// top-level return: there's no caller frame to pop
+				// into, so this halts the whole script, the same way
+				// OpSuspend does at the natural end of the script. The
+				// value (if any) has no defined destination at the top
+				// level and is discarded.
+				return
+			}
 			//v.sp--
 			v.framesIndex--
 			v.curFrame = &v.frames[v.framesIndex-1]
